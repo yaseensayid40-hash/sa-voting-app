@@ -23,7 +23,32 @@ export async function POST(req: Request) {
     if (!result.valid) {
       return NextResponse.json({ error: 'Invalid SA ID: ' + result.error }, { status: 400 });
     }
+// --- AGE CHECK (18+) ---
+const year = parseInt(idNumber.substring(0, 2));
+const month = parseInt(idNumber.substring(2, 4)) - 1; // JS months are 0-indexed
+const day = parseInt(idNumber.substring(4, 6));
 
+// Determine the century (if year is 24 or less, it's 2000s, otherwise 1900s)
+const currentYear = new Date().getFullYear();
+const currentCentury = Math.floor(currentYear / 100) * 100;
+let birthYear = currentCentury + year;
+if (birthYear > currentYear) {
+  birthYear -= 100; // It was the previous century
+}
+
+const birthDate = new Date(birthYear, month, day);
+const today = new Date();
+
+let age = today.getFullYear() - birthDate.getFullYear();
+const m = today.getMonth() - birthDate.getMonth();
+if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+  age--;
+}
+
+if (age < 18) {
+  return NextResponse.json({ error: 'You must be at least 18 years old to vote.' }, { status: 403 });
+}
+// --- END AGE CHECK ---
     // 3. Hash the ID number (For privacy)
     const voterHash = crypto.createHash('sha256').update(idNumber).digest('hex');
 
